@@ -1,7 +1,7 @@
 %matplotlib inline
 
 import pandas as pd
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import numpy as np
 import sklearn as sk
 from scipy.stats import pearsonr, normaltest
@@ -15,27 +15,26 @@ import psycopg2
 from sqlalchemy import create_engine
 
 # reading in csv files, pushing them to a local db created on my command line
-# cancellations = pd.read_csv('airport_cancellations.csv')
-# operations = pd.read_csv('Airport_operations.csv')
-# airports = pd.read_csv('airports.csv')
+cancellations = pd.read_csv('airport_cancellations.csv')
+operations = pd.read_csv('Airport_operations.csv')
+airports = pd.read_csv('airports.csv')
 
 # upload csv files to a local postgres as tables
-# engine = create_engine('postgresql://canadasfinest189@localhost:5432/project_7')
-# delays.to_sql('cancellations', engine)
-# operations.to_sql('operations', engine)
-# airports.to_sql('airports', engine)
+engine = create_engine('postgresql://canadasfinest189@localhost:5432/project_7')
+delays.to_sql('cancellations', engine)
+operations.to_sql('operations', engine)
+airports.to_sql('airports', engine)
 
 # using sql query to merge and import data
-# data = pd.read_sql_query('''select * FROM operations JOIN cancellations ON
-# (operations."airport" = cancellations."Airport" AND operations."year"=cancellations."Year")
-# JOIN airports ON operations.airport=airports."LocID";''', engine)
+data = pd.read_sql_query('''select * FROM operations JOIN cancellations ON
+    (operations."airport" = cancellations."Airport" AND operations."year"=cancellations."Year")
+    JOIN airports ON operations.airport=airports."LocID";''', engine)
 
 # writing to csv to work offline just in case
-# data.to_csv("airports_merged.csv", encoding = 'utf-8', index=False)
+data.to_csv("airports_merged.csv", encoding = 'utf-8', index=False)
 
 #reading in data to save time.
 airports = pd.read_csv('airports_merged.csv')
-airports
 
 
 names =['index', 'airport', 'year', 'departures',
@@ -58,13 +57,17 @@ airports.drop(drop_list, axis=1, inplace=True)
 airports.drop(drop_list2, axis=1, inplace=True)
 airports.drop('Airport', axis=1, inplace=True)
 airports.drop('index', axis=1, inplace=True)
-# eda & some small graphing shit
 
-avg = pd.groupby('airport')
+
+
+
+
+# eda & some small graphing shit
+avg = airports.groupby('airport').mean()
 names2 = airports.columns
 
 # encoding stuff, refining stuff, part 4 stuff
-features_mask = [u'year',u'departures', u'arrivals',
+features_mask = [u'departures', u'arrivals',
     u'percent on-time gate departures',u'percent on-time airport departures',u'percent on-time gate arrivals',
     u'average_gate_departure_delay',u'average_taxi_out_time',u'average taxi out delay',u'average airport departure delay',
     u'average airborne delay',u'average taxi in delay', u'average block delay', u'average gate arrival delay',
@@ -72,7 +75,7 @@ features_mask = [u'year',u'departures', u'arrivals',
     u'ALIAS',u'faa region',u'city',u'state',u'AP Type']
 
 categorical_mask = [u'AP_NAME',u'ALIAS',u'faa region',u'city',u'state',u'AP Type']
-numerical_mask = [u'year',u'departures', u'arrivals', u'percent on-time gate departures',
+numerical_mask = [u'departures', u'arrivals', u'percent on-time gate departures',
     u'percent on-time airport departures',u'percent on-time gate arrivals',
     u'average_gate_departure_delay',u'average_taxi_out_time',u'average taxi out delay',u'average airport departure delay',
     u'average airborne delay',u'average taxi in delay', u'average block delay', u'average gate arrival delay',
@@ -117,14 +120,19 @@ print(cvarex)
 
 
 # PCA Transformation
-pcask = PCA(n_components=2)
-PCA = pcask.fit_transform(x)
+pcask = PCA(n_components=4)
+pca_trans = pcask.fit_transform(x)
 
-Ydf = pd.DataFrame(PCA)
+Ydf = pd.DataFrame(pca_trans)
 airports3 = airports[['airport', 'year']]
 airport_pca = airports3.join(Ydf, on=None, how='left')
 airport_pca
 
-graph = airport_pca.plot(kind='scatter', x='PC2', y='PC1', figsize=(16,8))
-for i, airports in enumerate(airports3['airport']):
-    graph.annotate(airport, (airport_pca.iloc[i].PC2, airport_pca.iloc[i].PC1))
+
+plt.scatter(airport_pca[0], airport_pca[1])
+
+airport_pca.columns = ['airport', 'year', 'PCA1', 'PCA2', 'PCA3', 'PCA4']
+
+graph = airport_pca.plot(kind='scatter', x='PCA1', y='PCA2', figsize=(16,8))
+for i, airport in enumerate(airports3['airport']):
+    graph.annotate(airport, (airport_pca.iloc[i].PCA1, airport_pca.iloc[i].PCA2))
